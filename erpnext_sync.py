@@ -37,6 +37,8 @@ ERPNEXT_VERSION = getattr(config, 'ERPNEXT_VERSION', 14)
 #  - <device_id>_pull_timestamp
 #  - <device_id>_push_timestamp
 #  - <shift_type>_sync_timestamp
+def mainx():
+    abc = authorize_odoo()
 
 def main():
     """Takes care of checking if it is time to pull data based on config,
@@ -125,7 +127,8 @@ def pull_process_and_push_data(device, device_attendance_logs=None):
                 punch_direction = 'IN'
             else:
                 punch_direction = None
-        erpnext_status_code, erpnext_message = send_to_erpnext(device_attendance_log['user_id'], device_attendance_log['timestamp'], device['device_id'], punch_direction)
+        #erpnext_status_code, erpnext_message = send_to_erpnext(device_attendance_log['user_id'], device_attendance_log['timestamp'], device['device_id'], punch_direction)
+        erpnext_status_code, erpnext_message = send_to_odoo_erp(device_attendance_log['user_id'], device_attendance_log['timestamp'], device['device_id'], punch_direction)
         if erpnext_status_code == 200:
             attendance_success_logger.info("\t".join([erpnext_message, str(device_attendance_log['uid']),
                 str(device_attendance_log['user_id']), str(device_attendance_log['timestamp'].timestamp()),
@@ -178,29 +181,120 @@ def send_to_erpnext(employee_field_value, timestamp, device_id=None, log_type=No
     """
     Example: send_to_erpnext('12349',datetime.datetime.now(),'HO1','IN')
     """
-    endpoint_app = "hrms" if ERPNEXT_VERSION > 13 else "erpnext"
-    url = f"{config.ERPNEXT_URL}/api/method/{endpoint_app}.hr.doctype.employee_checkin.employee_checkin.add_log_based_on_employee_field"
+
+    print(employee_field_value)
+    print(timestamp)
+    print(device_id)
+    print(log_type)
+
+    return 200, 'Success MSG SHD'
+
+    # endpoint_app = "hrms" if ERPNEXT_VERSION > 13 else "erpnext"
+    # url = f"{config.ERPNEXT_URL}"
+    # headers = {
+    #     'Authorization': "token "+ config.ERPNEXT_API_KEY + ":" + config.ERPNEXT_API_SECRET,
+    #     'Accept': 'application/json'
+    # }
+    # data = {
+    #     'employee_field_value' : employee_field_value,
+    #     'timestamp' : timestamp.__str__(),
+    #     'device_id' : device_id,
+    #     'log_type' : log_type
+    # }
+    # response = requests.request("POST", url, headers=headers, json=data)
+    # if response.status_code == 200:
+    #     return 200, json.loads(response._content)['message']['name']
+    # else:
+    #     error_str = _safe_get_error_str(response)
+    #     if EMPLOYEE_NOT_FOUND_ERROR_MESSAGE in error_str:
+    #         error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
+    #         # TODO: send email?
+    #     else:
+    #         error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
+    #     return response.status_code, error_str
+
+
+def send_to_odoo_erp(employee_field_value, timestamp, device_id=None, log_type=None):
+    """
+    Example: send_to_erpnext('12349',datetime.datetime.now(),'HO1','IN')
+    """
+
+    print(employee_field_value)
+    print(timestamp.__str__())
+    # print(device_id)
+    # print(log_type)
+
+    #return 200, 'Success MSG SHD'
+
+    authKey = authorize_odoo()
+    print(authKey)
+
+    if authKey != None:
+        print('Attendance API Call')
+        url = f"{config.ERPNEXT_URL}/api/update_attendance"
+        headers = {
+            
+            # 'Authorization': "token "+ config.ERPNEXT_API_KEY + ":" + config.ERPNEXT_API_SECRET,
+            'Accept': 'application/json',
+            'Cookie': f"session_id={authKey}"
+        }
+        # data = {
+        #     'employee_field_value' : employee_field_value,
+        #     'timestamp' : timestamp.__str__(),
+        #     'device_id' : device_id,
+        #     'log_type' : log_type
+        # }
+
+        params = {
+            'badge_id': employee_field_value,
+            #'datetime_str': '2024-04-18 11:00:00'
+            'datetime_str': timestamp.__str__()
+        }
+        data = {
+            'jsonrpc': '2.0',
+            'id': None,
+            'params': params
+        }
+        response = requests.request("POST", url, headers=headers, json=data)
+        print('response')
+        if response.status_code == 200:
+            return 200, 'Sync Attendance Successful'
+        else:
+            error_str = _safe_get_error_str(response)
+            if EMPLOYEE_NOT_FOUND_ERROR_MESSAGE in error_str:
+                error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
+                # TODO: send email?
+            else:
+                error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
+            return response.status_code, error_str
+
+def authorize_odoo():
+    print('AUTHRNTICATING ODOO')
+    url = f"{config.ERPNEXT_URL}/web/session/authenticate"
     headers = {
-        'Authorization': "token "+ config.ERPNEXT_API_KEY + ":" + config.ERPNEXT_API_SECRET,
         'Accept': 'application/json'
     }
+    params = {
+        'db': 'operations-beta-test',
+        'login': 'sahad@mcmillanglobal.com',
+        'password': 'Sahad@212'
+    }
     data = {
-        'employee_field_value' : employee_field_value,
-        'timestamp' : timestamp.__str__(),
-        'device_id' : device_id,
-        'log_type' : log_type
+        'jsonrpc': '2.0',
+        'params': params
     }
     response = requests.request("POST", url, headers=headers, json=data)
     if response.status_code == 200:
-        return 200, json.loads(response._content)['message']['name']
-    else:
-        error_str = _safe_get_error_str(response)
-        if EMPLOYEE_NOT_FOUND_ERROR_MESSAGE in error_str:
-            error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
-            # TODO: send email?
+        cookie_value = response.cookies.get('session_id')
+        print(cookie_value)
+        if cookie_value:
+            return str(cookie_value)
         else:
-            error_logger.error('\t'.join(['Error during ERPNext API Call.', str(employee_field_value), str(timestamp.timestamp()), str(device_id), str(log_type), error_str]))
-        return response.status_code, error_str
+            return None
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        return None
+    
 
 def update_shift_last_sync_timestamp(shift_type_device_mapping):
     """

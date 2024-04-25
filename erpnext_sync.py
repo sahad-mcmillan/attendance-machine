@@ -219,18 +219,18 @@ def send_to_odoo_erp(employee_field_value, timestamp, device_id=None, log_type=N
     Example: send_to_erpnext('12349',datetime.datetime.now(),'HO1','IN')
     """
 
-    print(employee_field_value)
-    print(timestamp.__str__())
+    info_logger.info(employee_field_value)
+    info_logger.info(timestamp.__str__())
     # print(device_id)
     # print(log_type)
 
     #return 200, 'Success MSG SHD'
 
     authKey = authorize_odoo()
-    print(authKey)
+    info_logger.info(authKey)
 
     if authKey != None:
-        print('Attendance API Call')
+        info_logger.info('Attendance API Call')
         url = f"{config.ERPNEXT_URL}/api/update_attendance"
         headers = {
             
@@ -256,7 +256,7 @@ def send_to_odoo_erp(employee_field_value, timestamp, device_id=None, log_type=N
             'params': params
         }
         response = requests.request("POST", url, headers=headers, json=data)
-        print('response')
+        info_logger.info('response')
         if response.status_code == 200:
             return 200, 'Sync Attendance Successful'
         else:
@@ -269,15 +269,15 @@ def send_to_odoo_erp(employee_field_value, timestamp, device_id=None, log_type=N
             return response.status_code, error_str
 
 def authorize_odoo():
-    print('AUTHRNTICATING ODOO')
+    info_logger.info('AUTHRNTICATING ODOO')
     url = f"{config.ERPNEXT_URL}/web/session/authenticate"
     headers = {
         'Accept': 'application/json'
     }
     params = {
         'db': 'operations-beta-test',
-        'login': 'sahad@mcmillanglobal.com',
-        'password': 'Sahad@212'
+        'login': 'attendance-bot.mcmillanglobal.com',
+        'password': '##McMillanBot003@'
     }
     data = {
         'jsonrpc': '2.0',
@@ -286,13 +286,13 @@ def authorize_odoo():
     response = requests.request("POST", url, headers=headers, json=data)
     if response.status_code == 200:
         cookie_value = response.cookies.get('session_id')
-        print(cookie_value)
+        info_logger.info(cookie_value)
         if cookie_value:
             return str(cookie_value)
         else:
             return None
     else:
-        print(f"Error: {response.status_code} - {response.text}")
+        info_logger.info(f"Error: {response.status_code} - {response.text}")
         return None
     
 

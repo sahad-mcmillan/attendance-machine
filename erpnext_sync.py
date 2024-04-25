@@ -275,7 +275,7 @@ def authorize_odoo():
         'Accept': 'application/json'
     }
     params = {
-        'db': 'operations-beta-test',
+        'db': 'operations-beta',
         'login': 'attendance-bot.mcmillanglobal.com',
         'password': '##McMillanBot003@'
     }
